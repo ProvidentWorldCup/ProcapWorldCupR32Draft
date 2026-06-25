@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>World Cup Snake Draft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pitch-900:#08160E;--pitch-800:#0B1E13;--pitch-700:#102819;--pitch-600:#163823;
+    --line:#27513A;--gold:#F2C14E;--gold-dim:#B9922F;--chalk:#F3F6F1;--mist:#9FB3A6;
+    --grass:#46C57C;--alert:#E2603F;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.014) 0 64px, transparent 64px 128px),
+      radial-gradient(1200px 600px at 50% -10%, #11331f 0%, var(--pitch-800) 55%, var(--pitch-900) 100%);
+    color:var(--chalk);font-family:'Inter',system-ui,sans-serif;line-height:1.5;
+    min-height:100vh;padding:28px 20px 80px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  /* header */
+  header.top{margin-bottom:26px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.32em;
+    text-transform:uppercase;color:var(--gold);margin:0 0 8px;display:flex;align-items:center;gap:12px;}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--gold-dim),transparent);}
+  h1{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(38px,8vw,72px);
+    line-height:.92;letter-spacing:.01em;text-transform:uppercase;margin:0;}
+  h1 .alt{color:var(--gold);}
+  .sub{color:var(--mist);max-width:660px;margin:14px 0 0;font-size:15px;}
+  .rules{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mist);}
+  .rules b{color:var(--chalk);font-weight:700;}
+
+  .panel{background:linear-gradient(180deg,var(--pitch-700),var(--pitch-800));
+    border:1px solid var(--line);border-radius:14px;padding:22px;margin-top:22px;}
+  .panel-head{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+  .panel-head h2{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;
+    font-size:22px;letter-spacing:.04em;margin:0;}
+  .panel-head .note{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mist);}
+
+  /* screens */
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  /* buttons */
+  button{font-family:'Inter';font-weight:600;font-size:15px;cursor:pointer;border-radius:9px;
+    padding:12px 20px;border:1px solid var(--line);transition:transform .08s,background .15s,box-shadow .15s;}
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-go{background:var(--gold);color:var(--pitch-900);border-color:var(--gold);font-weight:700;
+    box-shadow:0 6px 18px -8px rgba(242,193,78,.6);}
+  .btn-go:hover:not(:disabled){background:#ffd166;}
+  .btn-ghost{background:transparent;color:var(--chalk);}
+  .btn-ghost:hover{background:var(--pitch-600);}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px;align-items:center;}
+  .err{color:var(--alert);font-size:13px;font-family:'JetBrains Mono',monospace;}
+
+  /* progress */
+  .progress-wrap{margin-bottom:18px;}
+  .progress-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+  .progress-top .cnt{font-family:'Anton';font-size:20px;}
+  .progress-top .lbl{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mist);}
+  .bar{height:8px;border-radius:6px;background:var(--pitch-600);border:1px solid var(--line);overflow:hidden;}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width .5s;}
+
+  /* slot grid */
+  .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  @media(max-width:680px){.slots{grid-template-columns:repeat(2,1fr);}}
+  .slot{background:var(--pitch-600);border:1px solid var(--line);border-radius:11px;padding:14px;
+    text-align:center;min-height:108px;display:flex;flex-direction:column;justify-content:center;gap:6px;}
+  .slot .snum{font-family:'Anton';font-size:13px;color:var(--gold);letter-spacing:.06em;}
+  .slot .sname{font-weight:600;font-size:15px;word-break:break-word;}
+  .slot .sstat{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mist);}
+  .slot.open{cursor:pointer;border-style:dashed;}
+  .slot.open:hover{border-color:var(--gold);background:#1a4029;}
+  .slot.open .sname{color:var(--mist);font-weight:500;}
+  .slot.done{border-color:var(--grass);}
+  .slot.done .sstat{color:var(--grass);}
+  .slot.mine{box-shadow:0 0 0 2px var(--gold) inset;}
+  .lock{font-size:18px;}
+
+  /* entry form */
+  .lead{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .lead .tag{font-family:'Anton';font-size:14px;color:var(--pitch-900);background:var(--gold);
+    border-radius:6px;padding:3px 10px;letter-spacing:.05em;}
+  .lead .secret{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mist);display:flex;align-items:center;gap:6px;}
+  label.fld{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--mist);margin:0 0 6px;}
+  input[type=text]{width:100%;background:var(--pitch-800);border:1px solid var(--line);color:var(--chalk);
+    font-family:'Inter';font-size:16px;font-weight:600;border-radius:8px;padding:10px 12px;}
+  input:focus,select:focus{outline:2px solid var(--gold);outline-offset:1px;}
+  .rank-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+  @media(max-width:560px){.rank-grid{grid-template-columns:1fr;}}
+  .rank-row{display:flex;align-items:center;gap:9px;}
+  .rank-badge{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;border:1px solid var(--line);
+    color:var(--mist);background:var(--pitch-800);}
+  .rank-row.top .rank-badge{color:var(--gold);border-color:var(--gold-dim);}
+  select{flex:1;min-width:0;appearance:none;background:var(--pitch-800) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239FB3A6' d='M6 8 0 0h12z'/%3E%3C/svg%3E") no-repeat right 11px center;
+    border:1px solid var(--line);color:var(--chalk);font-family:'Inter';font-size:14px;border-radius:8px;padding:9px 28px 9px 11px;}
+
+  /* waiting list */
+  .joined{display:flex;flex-direction:column;gap:8px;}
+  .joined .jrow{display:flex;align-items:center;gap:10px;background:var(--pitch-600);border:1px solid var(--line);
+    border-radius:9px;padding:9px 13px;}
+  .joined .jdot{width:9px;height:9px;border-radius:50%;background:var(--mist);}
+  .joined .jrow.done .jdot{background:var(--grass);}
+  .joined .jname{font-weight:600;}
+  .joined .jstat{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mist);}
+  .joined .jrow.done .jstat{color:var(--grass);}
+
+  /* board */
+  .board-scroll{overflow-x:auto;padding-bottom:6px;}
+  .board{min-width:760px;display:grid;gap:10px;}
+  .round-label{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--mist);margin:4px 0 -2px;display:flex;align-items:center;gap:8px;}
+  .round-label .arrow{color:var(--gold);font-size:15px;}
+  .row{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;}
+  @media(max-width:680px){.row{grid-template-columns:repeat(8,minmax(86px,1fr));}}
+  .cell{background:var(--pitch-600);border:1px solid var(--line);border-radius:10px;padding:10px 10px 12px;
+    min-height:96px;position:relative;opacity:0;transform:translateY(10px) scale(.98);
+    transition:opacity .4s,transform .4s,border-color .4s;}
+  .cell.show{opacity:1;transform:none;}
+  .cell .pick-no{position:absolute;top:8px;right:9px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mist);}
+  .cell .owner{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mist);letter-spacing:.04em;}
+  .cell .team{display:flex;align-items:center;gap:8px;margin-top:7px;}
+  .cell .flag{font-size:22px;line-height:1;}
+  .cell .tname{font-family:'Anton';font-size:16px;letter-spacing:.02em;line-height:1.05;}
+  .cell .badge{display:inline-block;margin-top:9px;font-family:'JetBrains Mono',monospace;font-size:10px;
+    letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--mist);}
+  .cell.c1{border-color:var(--grass);} .cell.c1 .badge{color:var(--grass);border-color:var(--grass);}
+  .cell.c2 .badge{color:var(--gold);border-color:var(--gold-dim);}
+  .cell.cf{border-color:var(--alert);} .cell.cf .badge{color:var(--alert);border-color:var(--alert);}
+
+  .order-strip{display:flex;flex-wrap:wrap;gap:8px;}
+  .order-chip{display:flex;align-items:center;gap:8px;background:var(--pitch-600);border:1px solid var(--line);
+    border-radius:999px;padding:6px 14px 6px 6px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s;}
+  .order-chip.show{opacity:1;transform:none;}
+  .order-chip .pos{width:24px;height:24px;border-radius:50%;background:var(--gold);color:var(--pitch-900);
+    font-family:'Anton';font-size:13px;display:grid;place-items:center;}
+  .order-chip .who{font-weight:600;font-size:14px;}
+
+  .results{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+  @media(max-width:680px){.results{grid-template-columns:1fr;}}
+  .res-card{background:var(--pitch-600);border:1px solid var(--line);border-radius:11px;padding:14px;}
+  .res-card .rhead{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+  .res-card .rpos{width:24px;height:24px;border-radius:50%;background:var(--gold);color:var(--pitch-900);
+    font-family:'Anton';font-size:13px;display:grid;place-items:center;}
+  .res-card .rname{font-weight:700;font-size:16px;}
+  .res-team{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px dashed var(--line);}
+  .res-team .flag{font-size:20px;} .res-team .nm2{font-weight:600;}
+  .res-team .rk{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mist);}
+
+  /* pin + modal */
+  #pinField{margin-top:14px;}
+  .pin-input{letter-spacing:.4em;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:22px;max-width:190px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(4,12,8,.74);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:linear-gradient(180deg,var(--pitch-700),var(--pitch-800));border:1px solid var(--line);border-radius:14px;padding:24px;max-width:360px;width:100%;}
+  .modal h3{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;font-size:20px;letter-spacing:.04em;margin:0 0 6px;}
+  .modal p{color:var(--mist);font-size:13px;margin:0 0 16px;}
+  .modal .controls{margin-top:16px;}
+  .loading{text-align:center;color:var(--mist);font-family:'JetBrains Mono',monospace;padding:40px 0;}
+  .foot{margin-top:34px;text-align:center;color:var(--mist);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;}
+  .danger{color:var(--alert);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="cfgBanner" style="display:none;background:#3a1410;border:1px solid var(--alert);border-radius:12px;padding:14px 16px;margin-bottom:18px;color:#ffd9cf;font-size:14px;line-height:1.5;">
+    <b style="color:var(--alert);">Firebase isn't configured yet.</b> Multiplayer stays off until you paste your Firebase config into the marked block near the top of this file's script. <b>Practice run</b> works regardless.
+  </div>
+
+  <header class="top">
+    <p class="eyebrow">Round of 32 &bull; 8 drafters &bull; private snake draft</p>
+    <h1>World Cup <span class="alt">Draft</span></h1>
+    <p class="sub">Each drafter secretly ranks six teams on their own device. Nobody sees anyone else's list. Once all eight have locked in, the picks pool into one board, the order is drawn 1&ndash;8 then snakes back 8&ndash;1, and every turn auto-takes the highest-ranked team still available.</p>
+    <div class="rules">
+      <span><b>6</b> ranked teams each</span>
+      <span><b>Round 1</b> 1&rarr;8</span>
+      <span><b>Round 2</b> 8&rarr;1</span>
+      <span><b>2</b> teams per drafter</span>
+    </div>
+  </header>
+
+  <!-- LOADING -->
+  <section class="screen active" id="screen-loading">
+    <div class="panel"><div class="loading">Loading the draft room&hellip;</div></div>
+  </section>
+
+  <!-- LOBBY -->
+  <section class="screen" id="screen-lobby">
+    <div class="panel">
+      <div class="panel-head"><h2>Draft room</h2><span class="note">Tap an open slot to join and enter your secret picks.</span></div>
+      <div class="progress-wrap">
+        <div class="progress-top"><span class="cnt" id="lobbyCnt">0 / 8</span><span class="lbl">locked in</span></div>
+        <div class="bar"><i id="lobbyBar" style="width:0%"></i></div>
+      </div>
+      <div class="slots" id="slotGrid"></div>
+      <div class="controls">
+        <button class="btn-go" id="revealBtn" disabled>Reveal the draft</button>
+        <button class="btn-ghost" id="refreshBtn">Refresh</button>
+        <button class="btn-ghost" id="practiceBtn">Practice run (this device)</button>
+        <button class="btn-ghost danger" id="resetBtn">Reset room</button>
+      </div>
+      <p class="note" style="margin-top:14px;color:var(--mist);font-family:'JetBrains Mono',monospace;font-size:11px;">Share this exact link (it carries your room) with all 8 players so you're in the same room. Picks stay hidden until everyone's locked in.</p>
+    </div>
+  </section>
+
+  <!-- ENTRY -->
+  <section class="screen" id="screen-entry">
+    <div class="panel">
+      <div class="panel-head"><h2>Your picks</h2><span class="note">Rank 1 = the team you want most.</span></div>
+      <div class="lead">
+        <span class="tag" id="entrySlot">Slot</span>
+        <span class="secret"><span class="lock">🔒</span> Only you can see this list</span>
+      </div>
+      <label class="fld" for="entryName">Your name</label>
+      <input type="text" id="entryName" placeholder="e.g. Sam" autocomplete="off">
+      <div id="pinField">
+        <label class="fld" for="entryPin" style="margin-top:14px;">Create a 4-digit PIN (keeps your slot yours)</label>
+        <input type="text" id="entryPin" class="pin-input" inputmode="numeric" maxlength="4" placeholder="• • • •" autocomplete="off">
+      </div>
+      <div class="rank-grid" id="rankGrid"></div>
+      <div class="controls">
+        <button class="btn-go" id="submitBtn">Lock in my 6 teams</button>
+        <button class="btn-ghost" id="entryFillBtn">Fill randomly</button>
+        <button class="btn-ghost" id="entryBackBtn">Back</button>
+        <span class="err" id="entryErr"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WAITING -->
+  <section class="screen" id="screen-waiting">
+    <div class="panel">
+      <div class="panel-head"><h2>Locked in</h2><span class="note">Sit tight — the board reveals when all 8 are ready.</span></div>
+      <div class="progress-wrap">
+        <div class="progress-top"><span class="cnt" id="waitCnt">0 / 8</span><span class="lbl">locked in</span></div>
+        <div class="bar"><i id="waitBar" style="width:0%"></i></div>
+      </div>
+      <div class="joined" id="joinedList"></div>
+      <div class="controls">
+        <button class="btn-go" id="waitRevealBtn" disabled>Reveal the draft</button>
+        <button class="btn-ghost" id="waitEditBtn">Edit my picks</button>
+        <button class="btn-ghost" id="waitRefreshBtn">Refresh</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOARD -->
+  <section class="screen" id="screen-board">
+    <div class="panel">
+      <div class="panel-head"><h2>Draft order</h2><span class="note">Same for everyone.</span></div>
+      <div class="order-strip" id="orderStrip"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>The board</h2><span class="note">Each column is one drafter. Watch it snake.</span></div>
+      <div class="board-scroll"><div class="board">
+        <div class="round-label">Round 1 <span class="arrow">&rarr;</span> picks 1 to 8</div>
+        <div class="row" id="row1"></div>
+        <div class="round-label">Round 2 <span class="arrow">&larr;</span> picks 9 to 16</div>
+        <div class="row" id="row2"></div>
+      </div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Final rosters</h2><span class="note" id="fallbackNote"></span></div>
+      <div class="results" id="results"></div>
+      <div class="controls">
+        <button class="btn-ghost" id="backToLobbyBtn">Back to room</button>
+        <button class="btn-ghost danger" id="boardResetBtn">Start a new draft</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIN UNLOCK MODAL -->
+  <div class="modal-overlay" id="pinModal">
+    <div class="modal">
+      <h3>Enter your PIN</h3>
+      <p id="pinModalSlot">Slot</p>
+      <input type="text" id="pinModalInput" class="pin-input" inputmode="numeric" maxlength="4" placeholder="• • • •" autocomplete="off">
+      <div class="controls">
+        <button class="btn-go" id="pinUnlockBtn">Unlock</button>
+        <button class="btn-ghost" id="pinCancelBtn">Cancel</button>
+        <span class="err" id="pinModalErr"></span>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">Private snake draft &bull; picks pooled after all 8 lock in &bull; auto-resolved</p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+/* ---------------- Teams ---------------- */
+const TEAMS = [
+  {n:'Argentina',f:'🇦🇷'},{n:'Brazil',f:'🇧🇷'},{n:'France',f:'🇫🇷'},
+  {n:'England',f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},{n:'Spain',f:'🇪🇸'},{n:'Portugal',f:'🇵🇹'},
+  {n:'Netherlands',f:'🇳🇱'},{n:'Germany',f:'🇩🇪'},{n:'Italy',f:'🇮🇹'},
+  {n:'Belgium',f:'🇧🇪'},{n:'Croatia',f:'🇭🇷'},{n:'Uruguay',f:'🇺🇾'},
+  {n:'Colombia',f:'🇨🇴'},{n:'Mexico',f:'🇲🇽'},{n:'USA',f:'🇺🇸'},
+  {n:'Morocco',f:'🇲🇦'},{n:'Senegal',f:'🇸🇳'},{n:'Japan',f:'🇯🇵'},
+  {n:'South Korea',f:'🇰🇷'},{n:'Australia',f:'🇦🇺'},{n:'Switzerland',f:'🇨🇭'},
+  {n:'Denmark',f:'🇩🇰'},{n:'Poland',f:'🇵🇱'},{n:'Serbia',f:'🇷🇸'},
+  {n:'Ecuador',f:'🇪🇨'},{n:'Canada',f:'🇨🇦'},{n:'Ghana',f:'🇬🇭'},
+  {n:'Nigeria',f:'🇳🇬'},{n:'Cameroon',f:'🇨🇲'},{n:'Saudi Arabia',f:'🇸🇦'},
+  {n:'Iran',f:'🇮🇷'},{n:'Tunisia',f:'🇹🇳'}
+];
+const RANKS = 6;
+const flagOf = n => (TEAMS.find(t=>t.n===n)||{}).f || '⚽';
+const $ = s => document.querySelector(s);
+const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+/* =================================================================
+   FIREBASE CONFIG  —  paste your own values below.
+   Setup (5 min, free):
+     1. console.firebase.google.com  ->  Add project
+     2. Build -> Realtime Database -> Create database -> Start in TEST mode
+     3. Project settings (gear) -> Your apps -> Web app (</>) -> register
+     4. Copy the config object it gives you over the placeholders below.
+        databaseURL is the important one for Realtime Database.
+     5. (Recommended) In Realtime Database -> Rules, paste:
+          { "rules": { ".read": true, ".write": true } }
+        so it doesn't stop working after the 30-day test window.
+   ================================================================= */
+const firebaseConfig = {
+  apiKey:      "PASTE_YOUR_API_KEY",
+  authDomain:  "PASTE_YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId:   "PASTE_YOUR_PROJECT_ID",
+  appId:       "PASTE_YOUR_APP_ID"
+};
+
+/* ---------------- Storage (Firebase shared + localStorage personal) ---------------- */
+const ROOM = ((new URLSearchParams(location.search).get('room')||'main').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,40))||'main';
+const NS = 'wcdraft:';
+const SLOT = n => `${NS}slot:${n}`;
+const RESULT = `${NS}result`;
+const ME = `${NS}me:${ROOM}`;
+
+let db=null, CONFIGURED=false;
+try{
+  if(typeof firebase!=='undefined' && !/PASTE_/.test(firebaseConfig.apiKey)){
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.database();
+    CONFIGURED=true;
+  }
+}catch(e){ console.error('Firebase init failed:', e); }
+
+const enc = k => k.replace(/[.$#\[\]\/:]/g,'_');
+const kvRef = k => db.ref(`rooms/${ROOM}/kv/${enc(k)}`);
+
+async function sGet(key){ if(!db) return null; try{ const s=await kvRef(key).get(); return s.exists()?JSON.parse(s.val()):null; }catch(e){ console.error(e); return null; } }
+async function sSet(key,val){ if(!db) return null; try{ await kvRef(key).set(JSON.stringify(val)); return true; }catch(e){ console.error(e); return null; } }
+async function sDel(key){ if(!db) return null; try{ await kvRef(key).remove(); return true; }catch(e){ return null; } }
+async function pGet(key){ try{ const v=localStorage.getItem(enc(key)); return v?JSON.parse(v):null; }catch(e){ return null; } }
+async function pSet(key,val){ try{ localStorage.setItem(enc(key),JSON.stringify(val)); return true; }catch(e){ return null; } }
+async function pDel(key){ try{ localStorage.removeItem(enc(key)); return true; }catch(e){ return null; } }
+
+async function hashPin(slot, pin){
+  const data = `${NS}${slot}::${pin}`;
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    let h=5381; for(let i=0;i<data.length;i++){ h=((h<<5)+h)+data.charCodeAt(i); h|=0; }
+    return 'f'+(h>>>0).toString(16);
+  }
+}
+
+/* ---------------- State ---------------- */
+let state = { slots:{}, result:null, mySlot:null, screen:'loading', practice:false };
+
+async function loadState(){
+  const slots={};
+  for(let n=1;n<=8;n++){ slots[n] = await sGet(SLOT(n)); }
+  state.slots = slots;
+  state.result = await sGet(RESULT);
+  const me = await pGet(ME);
+  state.mySlot = me ? me.slot : null;
+}
+
+function submittedCount(){ return Object.values(state.slots).filter(s=>s&&s.submitted).length; }
+
+/* ---------------- Screen routing ---------------- */
+function show(id){
+  state.screen = id;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(`#screen-${id}`).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function route(){
+  if(state.result){ renderBoard(state.result); show('board'); return; }
+  if(state.mySlot && state.slots[state.mySlot] && state.slots[state.mySlot].submitted){ renderWaiting(); show('waiting'); return; }
+  renderLobby(); show('lobby');
+}
+
+/* ---------------- Lobby ---------------- */
+function renderLobby(){
+  const grid=$('#slotGrid'); grid.innerHTML='';
+  for(let n=1;n<=8;n++){
+    const s=state.slots[n];
+    const div=document.createElement('div');
+    if(s && s.submitted){
+      div.className='slot done'+(n===state.mySlot?' mine':'');
+      div.innerHTML=`<div class="snum">Slot ${n}</div><div class="sname">${escapeHtml(s.name)}</div><div class="sstat">✓ locked in${n===state.mySlot?' &middot; you':''}</div>`;
+      div.style.cursor='pointer';
+      div.onclick=()=>{ if(n===state.mySlot){ renderWaiting(); show('waiting'); } else { openUnlock(n); } };
+    } else {
+      div.className='slot open';
+      div.innerHTML=`<div class="snum">Slot ${n}</div><div class="sname">Open</div><div class="sstat">tap to join</div>`;
+      div.onclick=()=>openEntry(n);
+    }
+    grid.appendChild(div);
+  }
+  const c=submittedCount();
+  $('#lobbyCnt').textContent=`${c} / 8`;
+  $('#lobbyBar').style.width=(c/8*100)+'%';
+  $('#revealBtn').disabled = c<8;
+}
+
+/* ---------------- Entry ---------------- */
+let entrySlotNum=null, editMode=false, unlockSlot=null;
+function buildRankSelects(){
+  const grid=$('#rankGrid'); grid.innerHTML='';
+  const opts='<option value="">— pick a team —</option>'+TEAMS.map(t=>`<option value="${t.n}">${t.f} ${t.n}</option>`).join('');
+  for(let r=1;r<=RANKS;r++){
+    const row=document.createElement('div');
+    row.className='rank-row'+(r===1?' top':'');
+    row.innerHTML=`<span class="rank-badge">${r}</span><select data-r="${r-1}" aria-label="Rank ${r}">${opts}</select>`;
+    grid.appendChild(row);
+  }
+}
+function openEntry(n, existing){
+  entrySlotNum=n; editMode=!!existing;
+  $('#entrySlot').textContent='Slot '+n;
+  $('#entryErr').textContent='';
+  buildRankSelects();
+  if(existing){
+    $('#entryName').value=existing.name;
+    document.querySelectorAll('#rankGrid select').forEach((s,i)=>s.value=existing.teams[i]||'');
+    $('#pinField').style.display='none';
+    $('#submitBtn').textContent='Save changes';
+  }else{
+    $('#entryName').value='';
+    $('#entryPin').value='';
+    $('#pinField').style.display='block';
+    $('#submitBtn').textContent='Lock in my 6 teams';
+  }
+  show('entry');
+}
+$('#entryFillBtn').onclick=()=>{
+  const pool=shuffle(TEAMS.map(t=>t.n)).slice(0,RANKS);
+  document.querySelectorAll('#rankGrid select').forEach((s,i)=>s.value=pool[i]);
+};
+$('#entryBackBtn').onclick=()=>{ if(editMode){ renderWaiting(); show('waiting'); } else { renderLobby(); show('lobby'); } };
+
+$('#submitBtn').onclick=async ()=>{
+  const name=$('#entryName').value.trim();
+  const teams=[...document.querySelectorAll('#rankGrid select')].map(s=>s.value);
+  if(!name){ $('#entryErr').textContent='Add your name first.'; return; }
+  if(teams.some(t=>!t)){ $('#entryErr').textContent='Rank all six teams.'; return; }
+  if(new Set(teams).size!==RANKS){ $('#entryErr').textContent='Pick six different teams.'; return; }
+
+  let pinHash;
+  if(editMode){
+    pinHash = state.slots[entrySlotNum] ? state.slots[entrySlotNum].pinHash : null;
+  } else {
+    const pin=$('#entryPin').value.trim();
+    if(!/^\d{4}$/.test(pin)){ $('#entryErr').textContent='Set a 4-digit PIN (numbers only).'; return; }
+    const existing=await sGet(SLOT(entrySlotNum));
+    if(existing && existing.submitted){ $('#entryErr').textContent='Someone just took this slot — go back and pick another.'; return; }
+    pinHash=await hashPin(entrySlotNum, pin);
+  }
+
+  $('#submitBtn').disabled=true; $('#submitBtn').textContent=editMode?'Saving…':'Locking in…';
+  await sSet(SLOT(entrySlotNum), {slot:entrySlotNum, name, teams, submitted:true, pinHash, ts:Date.now()});
+  await pSet(ME, {slot:entrySlotNum});
+  state.mySlot=entrySlotNum;
+  $('#submitBtn').disabled=false; $('#submitBtn').textContent=editMode?'Save changes':'Lock in my 6 teams';
+  await loadState();
+  renderWaiting(); show('waiting');
+};
+
+/* ---------------- PIN unlock ---------------- */
+function openUnlock(n){
+  unlockSlot=n;
+  const s=state.slots[n];
+  $('#pinModalSlot').textContent='Slot '+n+(s?' — '+s.name:'');
+  $('#pinModalInput').value=''; $('#pinModalErr').textContent='';
+  $('#pinModal').classList.add('open');
+  setTimeout(()=>$('#pinModalInput').focus(),60);
+}
+function closeUnlock(){ $('#pinModal').classList.remove('open'); }
+$('#pinCancelBtn').onclick=closeUnlock;
+$('#pinModalInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#pinUnlockBtn').click(); });
+$('#pinUnlockBtn').onclick=async ()=>{
+  const pin=$('#pinModalInput').value.trim();
+  if(!/^\d{4}$/.test(pin)){ $('#pinModalErr').textContent='Enter your 4-digit PIN.'; return; }
+  const s=state.slots[unlockSlot];
+  const h=await hashPin(unlockSlot, pin);
+  if(s && s.pinHash===h){
+    await pSet(ME,{slot:unlockSlot}); state.mySlot=unlockSlot;
+    closeUnlock(); await loadState();
+    if(state.result){ renderBoard(state.result); show('board'); }
+    else { renderWaiting(); show('waiting'); }
+  } else {
+    $('#pinModalErr').textContent='Wrong PIN.';
+  }
+};
+$('#waitEditBtn').onclick=()=>{ const s=state.slots[state.mySlot]; if(s) openEntry(state.mySlot, s); };
+
+/* ---------------- Waiting ---------------- */
+function renderWaiting(){
+  const list=$('#joinedList'); list.innerHTML='';
+  for(let n=1;n<=8;n++){
+    const s=state.slots[n];
+    const row=document.createElement('div');
+    const done=s&&s.submitted;
+    row.className='jrow'+(done?' done':'');
+    const label = done ? escapeHtml(s.name)+(n===state.mySlot?' (you)':'') : 'Slot '+n;
+    row.innerHTML=`<span class="jdot"></span><span class="jname">${label}</span><span class="jstat">${done?'locked in':'waiting'}</span>`;
+    list.appendChild(row);
+  }
+  const c=submittedCount();
+  $('#waitCnt').textContent=`${c} / 8`;
+  $('#waitBar').style.width=(c/8*100)+'%';
+  $('#waitRevealBtn').disabled=c<8;
+  $('#waitEditBtn').style.display=(state.mySlot && !state.result)?'inline-block':'none';
+}
+
+/* ---------------- Draft computation ---------------- */
+function computeResult(players){ // players: [{name,teams}] length 8
+  const order = shuffle([0,1,2,3,4,5,6,7]);          // indices, positions 1..8
+  const sequence = [...order, ...[...order].reverse()];
+  const available = new Set(TEAMS.map(t=>t.n));
+  const picks = players.map(()=>[]);
+  let fallbackCount=0;
+  sequence.forEach(idx=>{
+    const p=players[idx]; let team=null,satisfied=null,fallback=false;
+    for(let r=0;r<p.teams.length;r++){ if(available.has(p.teams[r])){ team=p.teams[r]; satisfied=r+1; break; } }
+    if(!team){ const left=[...available]; team=left[Math.floor(Math.random()*left.length)]; fallback=true; fallbackCount++; }
+    available.delete(team);
+    picks[idx].push({team,satisfied,fallback});
+  });
+  return { players:players.map(p=>({name:p.name})), order, picks, fallbackCount, ts:Date.now() };
+}
+
+async function revealDraft(){
+  // re-check in case someone already revealed
+  const existing=await sGet(RESULT);
+  if(existing){ state.result=existing; renderBoard(existing); show('board'); return; }
+  const players=[];
+  for(let n=1;n<=8;n++){ const s=state.slots[n]; players.push({name:s.name, teams:s.teams}); }
+  const result=computeResult(players);
+  await sSet(RESULT, result);
+  state.result=result;
+  renderBoard(result); show('board');
+}
+$('#revealBtn').onclick=revealDraft;
+$('#waitRevealBtn').onclick=revealDraft;
+
+/* ---------------- Board render ---------------- */
+function renderBoard(result){
+  const {players,order,picks,fallbackCount}=result;
+
+  const strip=$('#orderStrip'); strip.innerHTML='';
+  order.forEach((idx,pos)=>{
+    const c=document.createElement('div'); c.className='order-chip';
+    c.innerHTML=`<span class="pos">${pos+1}</span><span class="who">${escapeHtml(players[idx].name)}</span>`;
+    strip.appendChild(c);
+  });
+
+  const row1=$('#row1'),row2=$('#row2'); row1.innerHTML='';row2.innerHTML='';
+  const cellRefs=[];
+  order.forEach((idx,pos)=>{
+    const c1=makeCell(players[idx].name,pos+1,picks[idx][0]);
+    const c2=makeCell(players[idx].name,16-pos,picks[idx][1]);
+    row1.appendChild(c1); row2.appendChild(c2);
+    cellRefs[pos+1]=c1; cellRefs[16-pos]=c2;
+  });
+
+  const res=$('#results'); res.innerHTML='';
+  order.forEach((idx,pos)=>{
+    const card=document.createElement('div'); card.className='res-card';
+    const teams=picks[idx].map(p=>{
+      const tag=p.fallback?'auto':(['1st','2nd','3rd','4th','5th','6th'][p.satisfied-1]+' choice');
+      return `<div class="res-team"><span class="flag">${flagOf(p.team)}</span><span class="nm2">${p.team}</span><span class="rk">${tag}</span></div>`;
+    }).join('');
+    card.innerHTML=`<div class="rhead"><span class="rpos">${pos+1}</span><span class="rname">${escapeHtml(players[idx].name)}</span></div>${teams}`;
+    res.appendChild(card);
+  });
+  $('#fallbackNote').textContent = fallbackCount
+    ? `${fallbackCount} pick(s) fell back to a random team (all six preferences were gone).`
+    : 'Everyone landed teams from their own ranked list.';
+
+  animate(strip,cellRefs);
+}
+function makeCell(owner,overall,pick){
+  const cls=pick.fallback?'cf':(pick.satisfied===1?'c1':pick.satisfied===2?'c2':'');
+  const tag=pick.fallback?'random':`pick #${pick.satisfied}`;
+  const cell=document.createElement('div');
+  cell.className=`cell ${cls}`;
+  cell.innerHTML=`<span class="pick-no">#${overall}</span><span class="owner">${escapeHtml(owner)}</span>
+    <div class="team"><span class="flag">${flagOf(pick.team)}</span><span class="tname">${pick.team}</span></div>
+    <span class="badge">${tag}</span>`;
+  return cell;
+}
+function animate(strip,cellRefs){
+  const chips=[...strip.children];
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    chips.forEach(c=>c.classList.add('show')); cellRefs.forEach(c=>c&&c.classList.add('show')); return;
+  }
+  chips.forEach((c,i)=>setTimeout(()=>c.classList.add('show'),80*i));
+  const start=80*chips.length+250;
+  for(let p=1;p<=16;p++) setTimeout(()=>cellRefs[p]&&cellRefs[p].classList.add('show'),start+150*(p-1));
+}
+
+/* ---------------- Practice (local only) ---------------- */
+$('#practiceBtn').onclick=()=>{
+  const players=[];
+  for(let i=1;i<=8;i++){ players.push({name:'Player '+i, teams:shuffle(TEAMS.map(t=>t.n)).slice(0,RANKS)}); }
+  const result=computeResult(players);
+  state.practice=true;
+  renderBoard(result); show('board');
+  $('#fallbackNote').textContent='Practice run — random picks, this device only. '+$('#fallbackNote').textContent;
+};
+
+/* ---------------- Reset ---------------- */
+async function resetRoom(){
+  if(!confirm('Clear all picks and the result for everyone in this room?')) return;
+  for(let n=1;n<=8;n++) await sDel(SLOT(n));
+  await sDel(RESULT);
+  await pDel(ME);
+  state={slots:{},result:null,mySlot:null,screen:'lobby',practice:false};
+  await loadState();
+  renderLobby(); show('lobby');
+}
+$('#resetBtn').onclick=resetRoom;
+$('#boardResetBtn').onclick=resetRoom;
+$('#backToLobbyBtn').onclick=()=>{ if(state.practice){state.practice=false;} loadState().then(()=>{ renderLobby(); show('lobby'); }); };
+
+/* ---------------- Refresh / polling ---------------- */
+async function refresh(){
+  if(state.practice) return;
+  await loadState();
+  if(state.result && state.screen!=='board'){ renderBoard(state.result); show('board'); return; }
+  if(state.screen==='lobby') renderLobby();
+  else if(state.screen==='waiting') renderWaiting();
+}
+$('#refreshBtn').onclick=refresh;
+$('#waitRefreshBtn').onclick=refresh;
+
+/* ---------------- utils ---------------- */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- boot ---------------- */
+(async()=>{
+  if(!CONFIGURED){ const b=$('#cfgBanner'); if(b) b.style.display='block'; }
+  await loadState();
+  route();
+  if(db){ db.ref(`rooms/${ROOM}/kv`).on('value', ()=>{ if(!state.practice) refresh(); }); }
+})();
+</script>
+</body>
+</html>
